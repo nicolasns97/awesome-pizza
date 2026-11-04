@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: awesome_pizza
+      POSTGRES_USER: awesome_pizza
+      POSTGRES_PASSWORD: awesome_pizza
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U awesome_pizza -d awesome_pizza"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/awesome_pizza
+      SPRING_DATASOURCE_USERNAME: awesome_pizza
+      SPRING_DATASOURCE_PASSWORD: awesome_pizza
+      AWESOME_PIZZA_AUTH_KITCHEN_TOKEN: ${KITCHEN_TOKEN:?Set KITCHEN_TOKEN in the environment or in a .env file}
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:

@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: awesome-pizza
+  datasource:
+    url: jdbc:postgresql://localhost:5432/awesome_pizza
+    username: awesome_pizza
+    password: awesome_pizza
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+awesome-pizza:
+  order:
+    queue-strategy: "FIFO"
+
+springdoc:
+  default-produces-media-type: application/json
