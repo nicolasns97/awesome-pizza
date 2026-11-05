@@ -1,6 +1,7 @@
 package com.adesso.awesomepizza.order.api;
 
 import com.adesso.awesomepizza.auth.KitchenOnly;
+import com.adesso.awesomepizza.order.OrderEntity;
 import com.adesso.awesomepizza.order.OrderService;
 import com.adesso.awesomepizza.order.OrderStatus;
 import io.swagger.v3.oas.annotations.Operation;
@@ -8,18 +9,24 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.EnumSet;
-import java.util.List;
 import java.util.Set;
 
 @Tag(name = "Orders")
 @RestController
 @RequestMapping("/api/v1/orders")
 public class OrderController {
+
+    private static final Set<OrderStatus> DEFAULT_LIST_STATUSES = EnumSet.of(OrderStatus.CREATED, OrderStatus.IN_PROGRESS);
+
     private final OrderService orderService;
     private final OrderMapper orderMapper;
 
@@ -50,18 +57,22 @@ public class OrderController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "List orders (kitchen)", description = "Orders in queue order. Defaults to CREATED and IN_PROGRESS.")
+    @Operation(summary = "List orders (kitchen)",
+            description = "Paginated, in queue order. Defaults to CREATED and IN_PROGRESS; size is at most 100.")
     @KitchenOnly
     @GetMapping
-    public ResponseEntity<List<OrderResponseDto>> listOrders(
-            @RequestParam(value = "status", required = false) Set<OrderStatus> statuses) {
-        Set<OrderStatus> requestedStatuses = statuses == null || statuses.isEmpty()
-                ? EnumSet.of(OrderStatus.CREATED, OrderStatus.IN_PROGRESS)
-                : statuses;
-        List<OrderResponseDto> orders = orderService.listOrders(requestedStatuses).stream()
-                .map(orderMapper::toDto)
-                .toList();
-        return ResponseEntity.ok(orders);
+    public ResponseEntity<OrderPageResponseDto> listOrders(
+            @RequestParam(value = "status", required = false) Set<OrderStatus> statuses,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+        Set<OrderStatus> requestedStatuses = statuses == null || statuses.isEmpty() ? DEFAULT_LIST_STATUSES : statuses;
+        Page<OrderEntity> orders = orderService.listOrders(requestedStatuses, PageRequest.of(page, size));
+        return ResponseEntity.ok(new OrderPageResponseDto(
+                orders.getContent().stream().map(orderMapper::toDto).toList(),
+                orders.getNumber(),
+                orders.getSize(),
+                orders.getTotalElements(),
+                orders.getTotalPages()));
     }
 
     @Operation(summary = "Take the next order (kitchen)", description = "Moves the next queued order to IN_PROGRESS.")

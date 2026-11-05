@@ -21,7 +21,7 @@ API docs: http://localhost:8080/swagger-ui.html. Kitchen endpoints require the `
 | `POST` | `/api/v1/orders` | customer |
 | `GET` | `/api/v1/orders/{trackingCode}` | customer |
 | `POST` | `/api/v1/orders/{trackingCode}/cancel` | customer |
-| `GET` | `/api/v1/orders?status=` | kitchen |
+| `GET` | `/api/v1/orders?status=&page=&size=` | kitchen |
 | `POST` | `/api/v1/orders/next` | kitchen |
 | `POST` | `/api/v1/orders/{trackingCode}/complete` | kitchen |
 

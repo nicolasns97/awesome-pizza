@@ -14,12 +14,16 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -161,6 +165,31 @@ class OrderServiceTest {
 
         assertThatThrownBy(() -> orderService.completeOrder(TRACKING_CODE)).isInstanceOf(OrderNotFoundException.class);
         assertThatThrownBy(() -> orderService.getOrder(TRACKING_CODE)).isInstanceOf(OrderNotFoundException.class);
+    }
+
+    @Test
+    void listOrdersLoadsOnlyTheRequestedPage() {
+        Set<OrderStatus> statuses = Set.of(OrderStatus.CREATED);
+        PageRequest secondPage = PageRequest.of(1, 2);
+        OrderEntity order = createdOrder();
+        when(orderRepository.findIdsInQueueOrder(statuses, secondPage)).thenReturn(new PageImpl<>(List.of(3L), secondPage, 3));
+        when(orderRepository.findWithItemsByIdInQueueOrder(List.of(3L))).thenReturn(List.of(order));
+
+        Page<OrderEntity> page = orderService.listOrders(statuses, secondPage);
+
+        assertThat(page.getContent()).containsExactly(order);
+        assertThat(page.getTotalElements()).isEqualTo(3);
+        assertThat(page.getTotalPages()).isEqualTo(2);
+    }
+
+    @Test
+    void listOrdersSkipsTheFetchForAnEmptyPage() {
+        Set<OrderStatus> statuses = Set.of(OrderStatus.CREATED);
+        PageRequest firstPage = PageRequest.of(0, 20);
+        when(orderRepository.findIdsInQueueOrder(statuses, firstPage)).thenReturn(Page.empty(firstPage));
+
+        assertThat(orderService.listOrders(statuses, firstPage)).isEmpty();
+        verify(orderRepository, never()).findWithItemsByIdInQueueOrder(any());
     }
 
     private static CreateOrderRequestDto request(OrderItemRequestDto... items) {

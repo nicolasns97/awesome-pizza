@@ -2,6 +2,8 @@ package com.adesso.awesomepizza.order;
 
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.QueryHint;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -27,9 +29,13 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long> {
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = LOCK_TIMEOUT_MILLIS)})
     Optional<OrderEntity> findWithLockByTrackingCode(String trackingCode);
 
+    @Query(value = "SELECT o.id FROM OrderEntity o WHERE o.status IN :statuses ORDER BY o.priorityScore DESC, o.createdAt ASC, o.id ASC",
+            countQuery = "SELECT COUNT(o) FROM OrderEntity o WHERE o.status IN :statuses")
+    Page<Long> findIdsInQueueOrder(@Param("statuses") Collection<OrderStatus> statuses, Pageable pageable);
+
     @EntityGraph(attributePaths = {"items", "items.pizza"})
-    @Query("SELECT o FROM OrderEntity o WHERE o.status IN :statuses ORDER BY o.priorityScore DESC, o.createdAt ASC, o.id ASC")
-    List<OrderEntity> findAllInQueueOrder(@Param("statuses") Collection<OrderStatus> statuses);
+    @Query("SELECT o FROM OrderEntity o WHERE o.id IN :ids ORDER BY o.priorityScore DESC, o.createdAt ASC, o.id ASC")
+    List<OrderEntity> findWithItemsByIdInQueueOrder(@Param("ids") Collection<Long> ids);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = SKIP_LOCKED)})

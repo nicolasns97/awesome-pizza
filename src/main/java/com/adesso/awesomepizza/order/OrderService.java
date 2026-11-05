@@ -9,6 +9,9 @@ import com.adesso.awesomepizza.order.queue.OrderQueueFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -78,8 +81,12 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public List<OrderEntity> listOrders(Set<OrderStatus> statuses) {
-        return orderRepository.findAllInQueueOrder(statuses);
+    public Page<OrderEntity> listOrders(Set<OrderStatus> statuses, Pageable pageable) {
+        Page<Long> ids = orderRepository.findIdsInQueueOrder(statuses, pageable);
+        List<OrderEntity> orders = ids.isEmpty()
+                ? List.of()
+                : orderRepository.findWithItemsByIdInQueueOrder(ids.getContent());
+        return new PageImpl<>(orders, pageable, ids.getTotalElements());
     }
 
     @Transactional(readOnly = true)
