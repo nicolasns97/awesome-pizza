@@ -1,5 +1,7 @@
 package com.adesso.awesomepizza.order.queue;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -9,6 +11,9 @@ import java.util.stream.Collectors;
 
 @Component
 public class OrderQueueFactory {
+
+    private static final Logger log = LoggerFactory.getLogger(OrderQueueFactory.class);
+
     private final OrderQueueStrategy activeStrategy;
 
     public OrderQueueFactory(
@@ -30,6 +35,7 @@ public class OrderQueueFactory {
             throw new QueueStrategyConfigurationException(
                     "Queue strategy not supported: " + activeStrategyName + ". Available strategies: " + strategies.keySet());
         }
+        log.info("Queue strategy: {}", this.activeStrategy.getStrategyName());
     }
 
     public OrderQueueStrategy getActiveStrategy() {

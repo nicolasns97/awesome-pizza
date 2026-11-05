@@ -16,3 +16,7 @@ awesome-pizza:
 
 springdoc:
   default-produces-media-type: application/json
+
+logging:
+  level:
+    com.adesso.awesomepizza: INFO
